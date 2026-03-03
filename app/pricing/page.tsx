@@ -65,7 +65,13 @@ export default function Pricing() {
     }
     setLoading(plan.name);
     // Stripe checkout will go here
-    alert(`Stripe checkout for ${plan.name} plan — coming soon!`);
+    const res = await fetch("/api/checkout", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ planName: plan.name }),
+});
+const data = await res.json();
+if (data.url) window.location.href = data.url;
     setLoading(null);
   };
 
