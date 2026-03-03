@@ -22,8 +22,8 @@ const filters = ["all","functional","art","miniatures","tools","toys"];
 export default function Home() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [modal, setModal] = useState(null);
-  const [user, setUser] = useState(null);
+  const [modal, setModal] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
