@@ -87,8 +87,8 @@ const [modelsLoading, setModelsLoading] = useState(true);
 
   const filtered = models.filter(m => {
     const matchCat = activeFilter === "all" || m.category === activeFilter;
-    const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.author.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
+    const matchSearch2 = m.name.toLowerCase().includes(search.toLowerCase()) || m.author.toLowerCase().includes(search.toLowerCase());
+    return matchCat;
   });
 
   return (
