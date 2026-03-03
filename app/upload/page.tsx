@@ -7,8 +7,8 @@ export default function Upload() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("functional");
   const [price, setPrice] = useState("0");
-  const [file, setFile] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -142,7 +142,7 @@ export default function Upload() {
             <div style={{marginBottom:"1.5rem"}}>
               <label style={{display:"block",fontSize:"0.85rem",color:"var(--muted)",marginBottom:6}}>3D Model File * (STL, OBJ, 3MF)</label>
               <div style={{border:"2px dashed var(--border)",borderRadius:8,padding:"1.5rem",textAlign:"center",cursor:"pointer",transition:"border-color .2s"}}
-                onClick={()=>document.getElementById("fileInput").click()}
+                onClick={()=>(document.getElementById("fileInput") as HTMLInputElement).click()}
                 onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="var(--accent)"}}
                 onDragLeave={e=>{e.currentTarget.style.borderColor="var(--border)"}}
                 onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)setFile(f);e.currentTarget.style.borderColor="var(--border)"}}>
@@ -152,7 +152,7 @@ export default function Upload() {
                 </p>
                 {!file && <p style={{color:"var(--muted)",fontSize:"0.78rem",marginTop:4}}>Supports STL, OBJ, 3MF</p>}
               </div>
-              <input id="fileInput" type="file" accept=".stl,.obj,.3mf" style={{display:"none"}} onChange={e=>setFile(e.target.files[0])}/>
+              <input id="fileInput" type="file" accept=".stl,.obj,.3mf" style={{display:"none"}} onChange={e=>setFile(e.target.files?.[0] ?? null)}/>
             </div>
 
             {message && (
