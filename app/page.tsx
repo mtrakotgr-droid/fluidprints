@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
+const ICONS: any = { functional:"🔧", art:"🎨", miniatures:"⚔️", tools:"🛠️", toys:"🎮" };
+
 const models = [
   { id:1, name:"Articulated Dragon", author:"ZenForge", downloads:4812, likes:320, category:"art", icon:"🐉", color:"#4f8cff" },
   { id:2, name:"Cable Management Clip", author:"PrintLab", downloads:3201, likes:210, category:"functional", icon:"🔧", color:"#a78bfa" },
@@ -30,6 +32,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  const [models, setModels] = useState<any[]>([]);
+const [modelsLoading, setModelsLoading] = useState(true);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -39,6 +44,13 @@ export default function Home() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+  supabase.from("models")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .then(({ data }) => { if(data) setModels(data); setModelsLoading(false); });
+}, []);
 
   const handleSignup = async () => {
     setLoading(true);
