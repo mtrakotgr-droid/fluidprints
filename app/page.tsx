@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "./supabase";
 
 const models = [
   { id:1, name:"Articulated Dragon", author:"ZenForge", downloads:4812, likes:320, category:"art", icon:"🐉", color:"#4f8cff" },
@@ -21,7 +22,56 @@ const filters = ["all","functional","art","miniatures","tools","toys"];
 export default function Home() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [modal, setModal] = useState<null|"login"|"signup">(null);
+  const [modal, setModal] = useState(null);
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignup = async () => {
+    setLoading(true);
+    setMessage("");
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      setMessage("❌ " + error.message);
+    } else {
+      if (data.user) {
+        await supabase.from("profiles").insert({ id: data.user.id, username });
+      }
+      setMessage("✅ Account created! Check your email to confirm.");
+    }
+    setLoading(false);
+  };
+
+  const handleLogin = async () => {
+    setLoading(true);
+    setMessage("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setMessage("❌ " + error.message);
+    } else {
+      setMessage("✅ Logged in!");
+      setTimeout(() => setModal(null), 1000);
+    }
+    setLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
   const filtered = models.filter(m => {
     const matchCat = activeFilter === "all" || m.category === activeFilter;
@@ -52,8 +102,17 @@ export default function Home() {
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
           <a href="#">Explore</a>
           <a href="#">Makers</a>
-          <button onClick={()=>setModal("login")} style={{padding:"6px 14px",borderRadius:8,fontSize:"0.88rem",background:"transparent",color:"var(--muted)",border:"1px solid var(--border)"}}>Log in</button>
-          <button onClick={()=>setModal("signup")} style={{padding:"6px 14px",borderRadius:8,fontSize:"0.88rem",background:"linear-gradient(135deg,#4f8cff,#a78bfa)",color:"#fff",border:"none"}}>Sign up</button>
+          {user ? (
+            <>
+              <span style={{color:"var(--accent)",fontSize:"0.88rem"}}>👤 {user.email}</span>
+              <button onClick={handleLogout} style={{padding:"6px 14px",borderRadius:8,fontSize:"0.88rem",background:"transparent",color:"var(--muted)",border:"1px solid var(--border)"}}>Log out</button>
+            </>
+          ) : (
+            <>
+              <button onClick={()=>{setModal("login");setMessage("");}} style={{padding:"6px 14px",borderRadius:8,fontSize:"0.88rem",background:"transparent",color:"var(--muted)",border:"1px solid var(--border)"}}>Log in</button>
+              <button onClick={()=>{setModal("signup");setMessage("");}} style={{padding:"6px 14px",borderRadius:8,fontSize:"0.88rem",background:"linear-gradient(135deg,#4f8cff,#a78bfa)",color:"#fff",border:"none"}}>Sign up</button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -68,7 +127,7 @@ export default function Home() {
         <p style={{color:"var(--muted)",fontSize:"1.05rem",margin:"1.2rem auto 2rem",maxWidth:500,lineHeight:1.7,animation:"fadeUp .7s .2s ease both"}}>The home for 3D designers and makers. Upload your models, explore thousands of prints, and connect with the community.</p>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",animation:"fadeUp .7s .3s ease both"}}>
           <button style={{padding:"10px 28px",fontSize:"1rem",borderRadius:10,background:"linear-gradient(135deg,#4f8cff,#a78bfa)",color:"#fff",border:"none"}}>Explore Models</button>
-          <button onClick={()=>setModal("signup")} style={{padding:"10px 28px",fontSize:"1rem",borderRadius:10,background:"transparent",color:"var(--muted)",border:"1px solid var(--border)"}}>Start Uploading</button>
+          <button onClick={()=>{setModal("signup");setMessage("");}} style={{padding:"10px 28px",fontSize:"1rem",borderRadius:10,background:"transparent",color:"var(--muted)",border:"1px solid var(--border)"}}>Start Uploading</button>
         </div>
       </section>
 
@@ -97,8 +156,8 @@ export default function Home() {
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"1.2rem"}}>
           {filtered.map((m,i)=>(
             <div key={m.id} onClick={()=>alert(`Opening "${m.name}" — 3D preview coming soon!`)} style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"var(--radius)",overflow:"hidden",cursor:"pointer",transition:"transform .25s,border-color .25s",animation:`fadeUp .5s ${i*0.05}s ease both`}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(-4px)";(e.currentTarget as HTMLDivElement).style.borderColor="rgba(79,140,255,.35)"}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(0)";(e.currentTarget as HTMLDivElement).style.borderColor="var(--border)"}}>
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.borderColor="rgba(79,140,255,.35)"}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.borderColor="var(--border)"}}>
               <div style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:`${m.color}18`,position:"relative"}}>
                 <span style={{fontSize:"3.2rem"}}>{m.icon}</span>
                 <div style={{position:"absolute",top:8,right:8,background:"rgba(10,10,15,.75)",backdropFilter:"blur(6px)",border:"1px solid var(--border)",borderRadius:6,padding:"2px 8px",fontSize:"0.72rem",color:"var(--muted)"}}>STL</div>
@@ -122,10 +181,12 @@ export default function Home() {
       </div>
 
       {/* UPLOAD CTA */}
-      <div onClick={()=>setModal("signup")} style={{margin:"0 2rem 3rem",maxWidth:1280,marginLeft:"auto",marginRight:"auto",border:"2px dashed var(--border)",borderRadius:"var(--radius)",padding:"2.5rem",textAlign:"center",cursor:"pointer"}}>
-        <div style={{fontSize:"2.2rem",marginBottom:12}}>⬆️</div>
-        <h3 style={{fontFamily:"Syne,sans-serif",fontSize:"1.1rem",marginBottom:6}}>Share your designs with the world</h3>
-        <p style={{color:"var(--muted)",fontSize:"0.88rem"}}>Upload STL, OBJ, or 3MF files — free forever. Join thousands of makers on Fluidprints.</p>
+      <div style={{margin:"0 auto 3rem",maxWidth:1280,paddingLeft:"2rem",paddingRight:"2rem"}}>
+        <div onClick={()=>{setModal("signup");setMessage("");}} style={{border:"2px dashed var(--border)",borderRadius:"var(--radius)",padding:"2.5rem",textAlign:"center",cursor:"pointer"}}>
+          <div style={{fontSize:"2.2rem",marginBottom:12}}>⬆️</div>
+          <h3 style={{fontFamily:"Syne,sans-serif",fontSize:"1.1rem",marginBottom:6}}>Share your designs with the world</h3>
+          <p style={{color:"var(--muted)",fontSize:"0.88rem"}}>Upload STL, OBJ, or 3MF files — free forever. Join thousands of makers on Fluidprints.</p>
+        </div>
       </div>
 
       {/* FOOTER */}
@@ -141,13 +202,41 @@ export default function Home() {
           <div onClick={e=>e.stopPropagation()} style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:18,padding:"2rem",width:"90%",maxWidth:480,position:"relative",animation:"fadeUp .3s ease"}}>
             <button onClick={()=>setModal(null)} style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"var(--muted)",fontSize:"1.4rem"}}>×</button>
             <h2 style={{fontFamily:"Syne,sans-serif",fontSize:"1.3rem",marginBottom:"1.2rem"}}>{modal==="login"?"Welcome back":"Join Fluidprints"}</h2>
-            {modal==="signup" && <div style={{marginBottom:14}}><label style={{display:"block",fontSize:"0.85rem",color:"var(--muted)",marginBottom:4}}>Username</label><input placeholder="coolmaker99" style={{width:"100%",padding:"8px 12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text)",fontFamily:"DM Sans,sans-serif",fontSize:"0.9rem",outline:"none"}}/></div>}
-            <div style={{marginBottom:14}}><label style={{display:"block",fontSize:"0.85rem",color:"var(--muted)",marginBottom:4}}>Email</label><input type="email" placeholder="you@example.com" style={{width:"100%",padding:"8px 12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text)",fontFamily:"DM Sans,sans-serif",fontSize:"0.9rem",outline:"none"}}/></div>
-            <div style={{marginBottom:14}}><label style={{display:"block",fontSize:"0.85rem",color:"var(--muted)",marginBottom:4}}>Password</label><input type="password" placeholder="••••••••" style={{width:"100%",padding:"8px 12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text)",fontFamily:"DM Sans,sans-serif",fontSize:"0.9rem",outline:"none"}}/></div>
+
+            {modal==="signup" && (
+              <div style={{marginBottom:14}}>
+                <label style={{display:"block",fontSize:"0.85rem",color:"var(--muted)",marginBottom:4}}>Username</label>
+                <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="coolmaker99" style={{width:"100%",padding:"8px 12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text)",fontFamily:"DM Sans,sans-serif",fontSize:"0.9rem",outline:"none"}}/>
+              </div>
+            )}
+
+            <div style={{marginBottom:14}}>
+              <label style={{display:"block",fontSize:"0.85rem",color:"var(--muted)",marginBottom:4}}>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" style={{width:"100%",padding:"8px 12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text)",fontFamily:"DM Sans,sans-serif",fontSize:"0.9rem",outline:"none"}}/>
+            </div>
+
+            <div style={{marginBottom:14}}>
+              <label style={{display:"block",fontSize:"0.85rem",color:"var(--muted)",marginBottom:4}}>Password</label>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={{width:"100%",padding:"8px 12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text)",fontFamily:"DM Sans,sans-serif",fontSize:"0.9rem",outline:"none"}}/>
+            </div>
+
+            {message && (
+              <div style={{padding:"8px 12px",borderRadius:8,background:"rgba(79,140,255,.08)",border:"1px solid rgba(79,140,255,.2)",fontSize:"0.85rem",color:"var(--text)",marginBottom:12}}>{message}</div>
+            )}
+
             <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:"1.5rem"}}>
               <button onClick={()=>setModal(null)} style={{padding:"8px 16px",borderRadius:8,background:"transparent",color:"var(--muted)",border:"1px solid var(--border)"}}>Cancel</button>
-              <button style={{padding:"8px 16px",borderRadius:8,background:"linear-gradient(135deg,#4f8cff,#a78bfa)",color:"#fff",border:"none"}}>{modal==="login"?"Log in":"Create account"}</button>
+              <button onClick={modal==="login"?handleLogin:handleSignup} disabled={loading} style={{padding:"8px 16px",borderRadius:8,background:"linear-gradient(135deg,#4f8cff,#a78bfa)",color:"#fff",border:"none",opacity:loading?0.7:1}}>
+                {loading?"Loading...":(modal==="login"?"Log in":"Create account")}
+              </button>
             </div>
+
+            <p style={{textAlign:"center",marginTop:14,fontSize:"0.82rem",color:"var(--muted)"}}>
+              {modal==="login"?"Don't have an account? ":"Already have an account? "}
+              <span onClick={()=>{setModal(modal==="login"?"signup":"login");setMessage("");}} style={{color:"var(--accent)",cursor:"pointer"}}>
+                {modal==="login"?"Sign up":"Log in"}
+              </span>
+            </p>
           </div>
         </div>
       )}
